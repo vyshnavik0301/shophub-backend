@@ -1,4 +1,4 @@
-package com.shophub.demo;
+package com.shophub.api;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -9,5 +9,4 @@ public class EcommerceAppApplication {
 	public static void main(String[] args) {
 		SpringApplication.run(EcommerceAppApplication.class, args);
 	}
-
 }
