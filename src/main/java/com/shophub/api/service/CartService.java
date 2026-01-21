@@ -36,9 +36,11 @@ public class CartService {
         return cartRepository.findByUserId(userId);
     }
 
+    /**
+     * Add item to cart. If product already exists, increase quantity and set price to current.
+     */
     @Transactional
     public CartItem addItemToCart(UUID userId, UUID productId, int quantity) {
-        // Get or create cart for user
         Cart cart = cartRepository.findByUserId(userId)
                 .orElseGet(() -> {
                     User user = userRepository.findById(userId)
@@ -49,34 +51,68 @@ public class CartService {
                     return cartRepository.save(newCart);
                 });
 
-        // Get product
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new RuntimeException("Product not found"));
 
-        // Create cart item
+        Optional<CartItem> existing = cartItemRepository.findByCartIdAndProductId(cart.getCartId(), productId);
+        if (existing.isPresent()) {
+            CartItem item = existing.get();
+            double oldLine = item.getPriceAtTime() * item.getQuantity();
+            item.setQuantity(item.getQuantity() + quantity);
+            item.setPriceAtTime(product.getPrice()); // use current price for the line
+            double newLine = item.getPriceAtTime() * item.getQuantity();
+            cart.setTotalAmount(cart.getTotalAmount() - oldLine + newLine);
+            cartRepository.save(cart);
+            return cartItemRepository.save(item);
+        }
+
         CartItem cartItem = new CartItem();
         cartItem.setCart(cart);
         cartItem.setProduct(product);
         cartItem.setQuantity(quantity);
         cartItem.setPriceAtTime(product.getPrice());
-
-        // Update cart total
         cart.setTotalAmount(cart.getTotalAmount() + (product.getPrice() * quantity));
-
         cartRepository.save(cart);
         return cartItemRepository.save(cartItem);
     }
 
+    /**
+     * Update cart item quantity. If quantity is 0, remove the item.
+     */
     @Transactional
-    public void removeItemFromCart(UUID cartItemId) {
-        CartItem cartItem = cartItemRepository.findById(cartItemId)
+    public CartItem updateItem(UUID userId, UUID itemId, int quantity) {
+        Cart cart = cartRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("Cart not found for user"));
+        CartItem item = cartItemRepository.findById(itemId)
                 .orElseThrow(() -> new RuntimeException("Cart item not found"));
+        if (!item.getCart().getCartId().equals(cart.getCartId())) {
+            throw new RuntimeException("Cart item does not belong to user's cart");
+        }
+        if (quantity <= 0) {
+            removeItemFromCart(userId, itemId);
+            return null; // removed
+        }
+        double oldLine = item.getPriceAtTime() * item.getQuantity();
+        item.setQuantity(quantity);
+        double newLine = item.getPriceAtTime() * item.getQuantity();
+        cart.setTotalAmount(cart.getTotalAmount() - oldLine + newLine);
+        cartRepository.save(cart);
+        return cartItemRepository.save(item);
+    }
 
-        Cart cart = cartItem.getCart();
-        double itemTotal = cartItem.getPriceAtTime() * cartItem.getQuantity();
+    @Transactional
+    public void removeItemFromCart(UUID userId, UUID itemId) {
+        Cart cart = cartRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("Cart not found for user"));
+        CartItem item = cartItemRepository.findById(itemId)
+                .orElseThrow(() -> new RuntimeException("Cart item not found"));
+        if (!item.getCart().getCartId().equals(cart.getCartId())) {
+            throw new RuntimeException("Cart item does not belong to user's cart");
+        }
+        double itemTotal = item.getPriceAtTime() * item.getQuantity();
         cart.setTotalAmount(cart.getTotalAmount() - itemTotal);
-
-        cartItemRepository.delete(cartItem);
+        cartItemRepository.delete(item);
         cartRepository.save(cart);
     }
+
 }

@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/cart")
+@RequestMapping("/api/users/{userId}/cart")
 public class CartController {
 
     private final CartService cartService;
@@ -19,33 +19,61 @@ public class CartController {
         this.cartService = cartService;
     }
 
-    @GetMapping("/{userId}")
-    public ResponseEntity<Cart> getCartByUserId(@PathVariable UUID userId) {
+    @GetMapping
+    public ResponseEntity<Cart> getCart(@PathVariable UUID userId) {
         return cartService.getCartByUserId(userId)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @PostMapping("/add")
-    public ResponseEntity<CartItem> addItemToCart(
-            @RequestParam UUID userId,
-            @RequestParam UUID productId,
-            @RequestParam int quantity) {
+    /** Request body: { "productId": "uuid", "quantity": 1 } */
+    @PostMapping("/items")
+    public ResponseEntity<CartItem> addItem(
+            @PathVariable UUID userId,
+            @RequestBody AddCartItemRequest request) {
         try {
-            CartItem cartItem = cartService.addItemToCart(userId, productId, quantity);
-            return ResponseEntity.status(HttpStatus.CREATED).body(cartItem);
+            if (request == null || request.productId() == null || request.quantity() < 1) {
+                return ResponseEntity.badRequest().build();
+            }
+            CartItem item = cartService.addItemToCart(userId, request.productId(), request.quantity());
+            return ResponseEntity.status(HttpStatus.CREATED).body(item);
         } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+            return ResponseEntity.badRequest().build();
         }
     }
 
-    @DeleteMapping("/item/{cartItemId}")
-    public ResponseEntity<Void> removeItemFromCart(@PathVariable UUID cartItemId) {
+    /** Request body: { "quantity": 2 }. If quantity is 0, item is removed. */
+    @PutMapping("/items/{itemId}")
+    public ResponseEntity<CartItem> updateItem(
+            @PathVariable UUID userId,
+            @PathVariable UUID itemId,
+            @RequestBody UpdateCartItemRequest request) {
         try {
-            cartService.removeItemFromCart(cartItemId);
+            if (request == null) {
+                return ResponseEntity.badRequest().build();
+            }
+            CartItem item = cartService.updateItem(userId, itemId, request.quantity());
+            if (item == null) {
+                return ResponseEntity.noContent().build();
+            }
+            return ResponseEntity.ok(item);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @DeleteMapping("/items/{itemId}")
+    public ResponseEntity<Void> removeItem(
+            @PathVariable UUID userId,
+            @PathVariable UUID itemId) {
+        try {
+            cartService.removeItemFromCart(userId, itemId);
             return ResponseEntity.noContent().build();
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
         }
     }
+
+    public record AddCartItemRequest(UUID productId, int quantity) {}
+    public record UpdateCartItemRequest(int quantity) {}
 }

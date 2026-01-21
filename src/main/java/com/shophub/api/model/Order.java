@@ -30,6 +30,15 @@ public class Order {
     @Column(name = "status", nullable = false)
     private OrderStatus status;
 
+    @Column(name = "shipping_address")
+    private String shippingAddress;
+
+    @Column(name = "contact_phone")
+    private String contactPhone;
+
+    @Column(name = "contact_email")
+    private String contactEmail;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

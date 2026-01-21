@@ -2,12 +2,14 @@ package com.shophub.api.service;
 
 import com.shophub.api.model.*;
 import com.shophub.api.model.enums.OrderStatus;
+import com.shophub.api.model.enums.PaymentMethod;
 import com.shophub.api.repository.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -19,24 +21,29 @@ public class OrderService {
     private final CartItemRepository cartItemRepository;
     private final PaymentService paymentService;
     private final UserRepository userRepository;
+    private final InventoryService inventoryService;
 
     public OrderService(OrderRepository orderRepository,
                         OrderItemRepository orderItemRepository,
                         CartRepository cartRepository,
                         CartItemRepository cartItemRepository,
                         PaymentService paymentService,
-                        UserRepository userRepository) {
+                        UserRepository userRepository,
+                        InventoryService inventoryService) {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.cartRepository = cartRepository;
         this.cartItemRepository = cartItemRepository;
         this.paymentService = paymentService;
         this.userRepository = userRepository;
+        this.inventoryService = inventoryService;
     }
 
+    /**
+     * Checkout: convert cart to order, reduce product stock, process mock payment, clear cart.
+     */
     @Transactional
-    public Order placeOrder(UUID userId) {
-        // Get user's cart
+    public Order checkout(UUID userId, String shippingAddress, String contactPhone, String contactEmail, PaymentMethod paymentMethod) {
         Cart cart = cartRepository.findByUserId(userId)
                 .orElseThrow(() -> new RuntimeException("Cart not found for user"));
 
@@ -45,18 +52,23 @@ public class OrderService {
             throw new RuntimeException("Cart is empty");
         }
 
-        // Get user
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // Create order
+        // Reduce stock before creating order (fail fast if insufficient)
+        for (CartItem ci : cartItems) {
+            inventoryService.reduceStock(ci.getProduct().getProductId(), ci.getQuantity());
+        }
+
         Order order = new Order();
         order.setUser(user);
         order.setTotalAmount(cart.getTotalAmount());
         order.setStatus(OrderStatus.PENDING);
+        order.setShippingAddress(shippingAddress);
+        order.setContactPhone(contactPhone);
+        order.setContactEmail(contactEmail);
         order = orderRepository.save(order);
 
-        // Create order items from cart items
         List<OrderItem> orderItems = new ArrayList<>();
         for (CartItem cartItem : cartItems) {
             OrderItem orderItem = new OrderItem();
@@ -68,10 +80,8 @@ public class OrderService {
         }
         order.setOrderItems(orderItems);
 
-        // Process payment
-        paymentService.mockPayment(order.getOrderId());
+        paymentService.mockPayment(order.getOrderId(), paymentMethod);
 
-        // Clear cart
         cartItemRepository.deleteAll(cartItems);
         cart.setTotalAmount(0.0);
         cartRepository.save(cart);
@@ -81,5 +91,13 @@ public class OrderService {
 
     public List<Order> getOrdersByUser(UUID userId) {
         return orderRepository.findByUserId(userId);
+    }
+
+    public Optional<Order> getOrderById(UUID orderId) {
+        return orderRepository.findById(orderId);
+    }
+
+    public Optional<OrderStatus> getOrderStatus(UUID orderId) {
+        return orderRepository.findById(orderId).map(Order::getStatus);
     }
 }

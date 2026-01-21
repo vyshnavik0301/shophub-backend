@@ -1,5 +1,6 @@
 package com.shophub.api.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -32,6 +33,7 @@ public class Payment {
     @Column(name = "status", nullable = false)
     private PaymentStatus status;
 
+    @JsonIgnore
     @OneToOne
     @JoinColumn(name = "order_id", nullable = false, unique = true)
     private Order order;

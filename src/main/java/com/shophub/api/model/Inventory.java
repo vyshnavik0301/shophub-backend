@@ -1,5 +1,6 @@
 package com.shophub.api.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -28,6 +29,7 @@ public class Inventory {
     @Column(name = "low_stock_threshold", nullable = false)
     private int lowStockThreshold;
 
+    @JsonIgnore
     @OneToOne
     @JoinColumn(name = "product_id", nullable = false, unique = true)
     private Product product;

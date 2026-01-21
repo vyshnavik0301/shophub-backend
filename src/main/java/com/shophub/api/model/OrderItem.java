@@ -1,5 +1,6 @@
 package com.shophub.api.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -25,6 +26,7 @@ public class OrderItem {
     @Column(name = "price_at_purchase", nullable = false)
     private double priceAtPurchase;
 
+    @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "order_id", nullable = false)
     private Order order;

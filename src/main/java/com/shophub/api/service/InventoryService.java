@@ -18,13 +18,15 @@ public class InventoryService {
 
     @Transactional
     public void reduceStock(UUID productId, int quantity) {
-        Inventory inventory = inventoryRepository.findByProductId(productId)
-                .orElseThrow(() -> new RuntimeException("Inventory not found for product"));
-
+        var opt = inventoryRepository.findByProductId(productId);
+        if (opt.isEmpty()) {
+            // TODO: Product has no Inventory record; skip reduce (treat as unlimited). Create Inventory for products that need stock control.
+            return;
+        }
+        Inventory inventory = opt.get();
         if (inventory.getStock() < quantity) {
             throw new RuntimeException("Insufficient stock available");
         }
-
         inventory.setStock(inventory.getStock() - quantity);
         inventoryRepository.save(inventory);
     }

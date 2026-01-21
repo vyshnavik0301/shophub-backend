@@ -1,5 +1,6 @@
 package com.shophub.api.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -25,6 +26,7 @@ public class CartItem {
     @Column(name = "price_at_time", nullable = false)
     private double priceAtTime;
 
+    @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "cart_id", nullable = false)
     private Cart cart;

@@ -25,14 +25,18 @@ public class PaymentService {
 
     @Transactional
     public Payment mockPayment(UUID orderId) {
+        return mockPayment(orderId, PaymentMethod.CREDIT_CARD);
+    }
+
+    @Transactional
+    public Payment mockPayment(UUID orderId, PaymentMethod method) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
 
-        // Create payment - always return success
         Payment payment = new Payment();
         payment.setOrder(order);
         payment.setAmount(order.getTotalAmount());
-        payment.setMethod(PaymentMethod.CREDIT_CARD);
+        payment.setMethod(method != null ? method : PaymentMethod.CREDIT_CARD);
         payment.setStatus(PaymentStatus.COMPLETED);
 
         return paymentRepository.save(payment);

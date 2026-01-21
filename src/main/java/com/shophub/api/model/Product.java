@@ -1,5 +1,6 @@
 package com.shophub.api.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -39,9 +40,16 @@ public class Product {
     @OneToOne(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     private Inventory inventory;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "product")
     private List<CartItem> cartItems;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "product")
     private List<OrderItem> orderItems;
+
+    /** Available stock from inventory (non-persisted). Requires inventory to be loaded. */
+    public int getAvailableStock() {
+        return inventory != null ? inventory.getStock() : 0;
+    }
 }
