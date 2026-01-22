@@ -1,5 +1,6 @@
 package com.shophub.api.service;
 
+import com.shophub.api.exception.ResourceNotFoundException;
 import com.shophub.api.model.Order;
 import com.shophub.api.model.Payment;
 import com.shophub.api.model.enums.PaymentMethod;
@@ -31,7 +32,7 @@ public class PaymentService {
     @Transactional
     public Payment mockPayment(UUID orderId, PaymentMethod method) {
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found: " + orderId));
 
         Payment payment = new Payment();
         payment.setOrder(order);

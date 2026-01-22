@@ -1,12 +1,13 @@
 package com.shophub.api.service;
 
+import com.shophub.api.exception.BadRequestException;
+import com.shophub.api.exception.ResourceNotFoundException;
 import com.shophub.api.model.User;
 import com.shophub.api.model.enums.UserRole;
 import com.shophub.api.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -25,7 +26,7 @@ public class AuthService {
     @Transactional
     public User register(String name, String email, String password) {
         if (userRepository.findByEmail(email).isPresent()) {
-            throw new RuntimeException("Email already registered");
+            throw new BadRequestException("Email already registered");
         }
         User user = new User();
         user.setName(name);
@@ -40,15 +41,16 @@ public class AuthService {
      */
     public User login(String email, String password) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         // TODO: validate password with encoder
         if (!user.getPassword().equals(password)) {
-            throw new RuntimeException("Invalid credentials");
+            throw new BadRequestException("Invalid credentials");
         }
         return user;
     }
 
-    public Optional<User> getCurrentUser(UUID userId) {
-        return userRepository.findById(userId);
+    public User getCurrentUser(UUID userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 }

@@ -1,5 +1,7 @@
 package com.shophub.api.service;
 
+import com.shophub.api.exception.BadRequestException;
+import com.shophub.api.exception.ResourceNotFoundException;
 import com.shophub.api.model.*;
 import com.shophub.api.model.enums.OrderStatus;
 import com.shophub.api.model.enums.PaymentMethod;
@@ -9,7 +11,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -45,15 +46,15 @@ public class OrderService {
     @Transactional
     public Order checkout(UUID userId, String shippingAddress, String contactPhone, String contactEmail, PaymentMethod paymentMethod) {
         Cart cart = cartRepository.findByUserId(userId)
-                .orElseThrow(() -> new RuntimeException("Cart not found for user"));
+                .orElseThrow(() -> new ResourceNotFoundException("Cart not found for user"));
 
         List<CartItem> cartItems = cartItemRepository.findByCartId(cart.getCartId());
         if (cartItems.isEmpty()) {
-            throw new RuntimeException("Cart is empty");
+            throw new BadRequestException("Cart is empty");
         }
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         // Reduce stock before creating order (fail fast if insufficient)
         for (CartItem ci : cartItems) {
@@ -93,11 +94,14 @@ public class OrderService {
         return orderRepository.findByUserId(userId);
     }
 
-    public Optional<Order> getOrderById(UUID orderId) {
-        return orderRepository.findById(orderId);
+    public Order getOrderById(UUID orderId) {
+        return orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found: " + orderId));
     }
 
-    public Optional<OrderStatus> getOrderStatus(UUID orderId) {
-        return orderRepository.findById(orderId).map(Order::getStatus);
+    public OrderStatus getOrderStatus(UUID orderId) {
+        return orderRepository.findById(orderId)
+                .map(Order::getStatus)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found: " + orderId));
     }
 }

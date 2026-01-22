@@ -1,5 +1,6 @@
 package com.shophub.api.service;
 
+import com.shophub.api.exception.BadRequestException;
 import com.shophub.api.model.Inventory;
 import com.shophub.api.repository.InventoryRepository;
 import org.springframework.stereotype.Service;
@@ -25,7 +26,7 @@ public class InventoryService {
         }
         Inventory inventory = opt.get();
         if (inventory.getStock() < quantity) {
-            throw new RuntimeException("Insufficient stock available");
+            throw new BadRequestException("Insufficient stock available");
         }
         inventory.setStock(inventory.getStock() - quantity);
         inventoryRepository.save(inventory);

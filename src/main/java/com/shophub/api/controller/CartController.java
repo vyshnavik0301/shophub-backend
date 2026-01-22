@@ -2,7 +2,11 @@ package com.shophub.api.controller;
 
 import com.shophub.api.model.Cart;
 import com.shophub.api.model.CartItem;
+import com.shophub.api.security.SecurityUtils;
 import com.shophub.api.service.CartService;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -10,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/users/{userId}/cart")
+@RequestMapping("/api/cart")
 public class CartController {
 
     private final CartService cartService;
@@ -20,60 +24,47 @@ public class CartController {
     }
 
     @GetMapping
-    public ResponseEntity<Cart> getCart(@PathVariable UUID userId) {
-        return cartService.getCartByUserId(userId)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<Cart> getCart() {
+        UUID userId = SecurityUtils.getCurrentUserId();
+        return ResponseEntity.ok(cartService.getCart(userId));
     }
 
     /** Request body: { "productId": "uuid", "quantity": 1 } */
     @PostMapping("/items")
     public ResponseEntity<CartItem> addItem(
-            @PathVariable UUID userId,
-            @RequestBody AddCartItemRequest request) {
-        try {
-            if (request == null || request.productId() == null || request.quantity() < 1) {
-                return ResponseEntity.badRequest().build();
-            }
-            CartItem item = cartService.addItemToCart(userId, request.productId(), request.quantity());
-            return ResponseEntity.status(HttpStatus.CREATED).body(item);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().build();
-        }
+            @Valid @RequestBody AddCartItemRequest request) {
+        UUID userId = SecurityUtils.getCurrentUserId();
+        CartItem item = cartService.addItemToCart(userId, request.productId(), request.quantity());
+        return ResponseEntity.status(HttpStatus.CREATED).body(item);
     }
 
     /** Request body: { "quantity": 2 }. If quantity is 0, item is removed. */
     @PutMapping("/items/{itemId}")
     public ResponseEntity<CartItem> updateItem(
-            @PathVariable UUID userId,
             @PathVariable UUID itemId,
-            @RequestBody UpdateCartItemRequest request) {
-        try {
-            if (request == null) {
-                return ResponseEntity.badRequest().build();
-            }
-            CartItem item = cartService.updateItem(userId, itemId, request.quantity());
-            if (item == null) {
-                return ResponseEntity.noContent().build();
-            }
-            return ResponseEntity.ok(item);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().build();
+            @Valid @RequestBody UpdateCartItemRequest request) {
+        UUID userId = SecurityUtils.getCurrentUserId();
+        CartItem item = cartService.updateItem(userId, itemId, request.quantity());
+        if (item == null) {
+            return ResponseEntity.noContent().build();
         }
+        return ResponseEntity.ok(item);
     }
 
     @DeleteMapping("/items/{itemId}")
     public ResponseEntity<Void> removeItem(
-            @PathVariable UUID userId,
             @PathVariable UUID itemId) {
-        try {
-            cartService.removeItemFromCart(userId, itemId);
-            return ResponseEntity.noContent().build();
-        } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
-        }
+        UUID userId = SecurityUtils.getCurrentUserId();
+        cartService.removeItemFromCart(userId, itemId);
+        return ResponseEntity.noContent().build();
     }
 
-    public record AddCartItemRequest(UUID productId, int quantity) {}
-    public record UpdateCartItemRequest(int quantity) {}
+    public record AddCartItemRequest(
+            @NotNull(message = "Product ID is required") UUID productId,
+            @Min(value = 1, message = "Quantity must be at least 1") int quantity
+    ) {}
+
+    public record UpdateCartItemRequest(
+            @Min(value = 0, message = "Quantity must be 0 or greater") int quantity
+    ) {}
 }

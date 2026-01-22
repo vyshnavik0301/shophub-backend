@@ -2,6 +2,9 @@ package com.shophub.api.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -21,18 +24,21 @@ public class Product {
     @Column(name = "product_id")
     private UUID productId;
 
+    @NotBlank(message = "Name is required")
     @Column(name = "name", nullable = false)
     private String name;
 
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
+    @Positive(message = "Price must be positive")
     @Column(name = "price", nullable = false)
     private double price;
 
     @Column(name = "image_url")
     private String imageUrl;
 
+    @NotNull(message = "Category is required")
     @ManyToOne
     @JoinColumn(name = "category_id", nullable = false)
     private Category category;

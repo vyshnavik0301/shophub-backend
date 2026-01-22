@@ -13,3 +13,7 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
     enabled: true
+
+jwt:
+  secret: ShopHubSecretKeyForJWTTokenGenerationMustBeAtLeast32CharactersLong
+  expiration-ms: 86400000

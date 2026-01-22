@@ -1,7 +1,7 @@
 package com.shophub.api.controller;
 
 import com.shophub.api.model.Order;
-import com.shophub.api.model.enums.OrderStatus;
+import com.shophub.api.security.SecurityUtils;
 import com.shophub.api.service.OrderService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,23 +20,20 @@ public class OrderController {
         this.orderService = orderService;
     }
 
-    @GetMapping("/users/{userId}/orders")
-    public ResponseEntity<List<Order>> getOrdersByUser(@PathVariable UUID userId) {
+    @GetMapping("/orders")
+    public ResponseEntity<List<Order>> getOrdersByUser() {
+        UUID userId = SecurityUtils.getCurrentUserId();
         List<Order> orders = orderService.getOrdersByUser(userId);
         return ResponseEntity.ok(orders);
     }
 
     @GetMapping("/orders/{orderId}")
     public ResponseEntity<Order> getOrderById(@PathVariable UUID orderId) {
-        return orderService.getOrderById(orderId)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        return ResponseEntity.ok(orderService.getOrderById(orderId));
     }
 
     @GetMapping("/orders/{orderId}/status")
     public ResponseEntity<Map<String, String>> getOrderStatus(@PathVariable UUID orderId) {
-        return orderService.getOrderStatus(orderId)
-                .map(s -> ResponseEntity.ok(Map.of("status", s.name())))
-                .orElse(ResponseEntity.notFound().build());
+        return ResponseEntity.ok(Map.of("status", orderService.getOrderStatus(orderId).name()));
     }
 }

@@ -41,8 +41,6 @@ public class CatalogController {
 
     @GetMapping("/{productId}")
     public ResponseEntity<Product> getById(@PathVariable UUID productId) {
-        return catalogService.getById(productId)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        return ResponseEntity.ok(catalogService.getById(productId));
     }
 }

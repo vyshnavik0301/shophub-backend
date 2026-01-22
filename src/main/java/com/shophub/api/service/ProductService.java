@@ -1,5 +1,7 @@
 package com.shophub.api.service;
 
+import com.shophub.api.exception.BadRequestException;
+import com.shophub.api.exception.ResourceNotFoundException;
 import com.shophub.api.model.Category;
 import com.shophub.api.model.Product;
 import com.shophub.api.repository.CategoryRepository;
@@ -8,7 +10,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -26,10 +27,10 @@ public class ProductService {
     public Product createProduct(Product product) {
         UUID categoryId = product.getCategory() != null ? product.getCategory().getCategoryId() : null;
         if (categoryId == null) {
-            throw new RuntimeException("Category is required");
+            throw new BadRequestException("Category is required");
         }
         Category category = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new RuntimeException("Category not found: " + categoryId));
+                .orElseThrow(() -> new ResourceNotFoundException("Category not found: " + categoryId));
         product.setCategory(category);
         product.setProductId(null);
         product.setInventory(null);
@@ -40,7 +41,8 @@ public class ProductService {
         return productRepository.findAll();
     }
 
-    public Optional<Product> getProductById(UUID id) {
-        return productRepository.findById(id);
+    public Product getProductById(UUID id) {
+        return productRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + id));
     }
 }

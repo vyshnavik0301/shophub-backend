@@ -1,12 +1,12 @@
 package com.shophub.api.service;
 
+import com.shophub.api.exception.ResourceNotFoundException;
 import com.shophub.api.model.Product;
 import com.shophub.api.repository.ProductRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -24,8 +24,9 @@ public class CatalogService {
     }
 
     @Transactional(readOnly = true)
-    public Optional<Product> getById(UUID productId) {
-        return productRepository.findById(productId);
+    public Product getById(UUID productId) {
+        return productRepository.findById(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + productId));
     }
 
     @Transactional(readOnly = true)

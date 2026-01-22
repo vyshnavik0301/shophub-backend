@@ -1,8 +1,13 @@
 package com.shophub.api.controller;
 
+import com.shophub.api.exception.BadRequestException;
 import com.shophub.api.model.Order;
 import com.shophub.api.model.enums.PaymentMethod;
+import com.shophub.api.security.SecurityUtils;
 import com.shophub.api.service.OrderService;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -10,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/users/{userId}")
+@RequestMapping("/api")
 public class CheckoutController {
 
     private final OrderService orderService;
@@ -25,31 +30,30 @@ public class CheckoutController {
      */
     @PostMapping("/checkout")
     public ResponseEntity<Order> checkout(
-            @PathVariable UUID userId,
-            @RequestBody CheckoutRequest request) {
-        try {
-            if (request == null) {
-                return ResponseEntity.badRequest().build();
+            @Valid @RequestBody CheckoutRequest request) {
+        UUID userId = SecurityUtils.getCurrentUserId();
+        PaymentMethod method = null;
+        if (request.paymentMethod() != null && !request.paymentMethod().isBlank()) {
+            try {
+                method = PaymentMethod.valueOf(request.paymentMethod().trim().toUpperCase());
+            } catch (IllegalArgumentException e) {
+                throw new BadRequestException("Invalid payment method: " + request.paymentMethod());
             }
-            PaymentMethod method = null;
-            if (request.paymentMethod() != null && !request.paymentMethod().isBlank()) {
-                try {
-                    method = PaymentMethod.valueOf(request.paymentMethod().trim().toUpperCase());
-                } catch (IllegalArgumentException e) {
-                    return ResponseEntity.badRequest().build();
-                }
-            }
-            Order order = orderService.checkout(
-                    userId,
-                    request.shippingAddress(),
-                    request.contactPhone(),
-                    request.contactEmail(),
-                    method);
-            return ResponseEntity.status(HttpStatus.CREATED).body(order);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().build();
         }
+        Order order = orderService.checkout(
+                userId,
+                request.shippingAddress(),
+                request.contactPhone(),
+                request.contactEmail(),
+                method);
+        return ResponseEntity.status(HttpStatus.CREATED).body(order);
     }
 
-    public record CheckoutRequest(String shippingAddress, String contactPhone, String contactEmail, String paymentMethod) {}
+    public record CheckoutRequest(
+            @NotBlank(message = "Shipping address is required") String shippingAddress,
+            String contactPhone,
+            @NotBlank(message = "Contact email is required")
+            @Email(message = "Invalid contact email format") String contactEmail,
+            String paymentMethod
+    ) {}
 }
